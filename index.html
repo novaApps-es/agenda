@@ -868,7 +868,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <div style="grid-column:span 2"><label>📅 Horario de tarde del Plan semanal (sale en la pregunta como {desde} y {hasta})</label>
         <div class="row" style="flex-wrap:nowrap;gap:6px"><span style="font-size:13px">de</span><input type="time" id="cfPlanDesde" step="900" style="width:130px"><span style="font-size:13px">a</span><input type="time" id="cfPlanHasta" step="900" style="width:130px"></div></div>
       <div style="grid-column:span 2"><label>📲 WhatsApp de la secretaría de la autoescuela (huecos, confirmados e informe del mes)</label><input id="cfTelSec" type="tel" placeholder="Ej.: 600 123 456"></div>
-      <div style="grid-column:span 2"><label>Lugar de prácticas de moto</label><input id="cfLugar" placeholder="Ej.: Ciudad Santander"></div>
+      <div style="grid-column:span 2"><label>Lugar de prácticas de moto</label><input id="cfLugar" placeholder="Ej.: Circuito municipal"></div>
       <div style="grid-column:span 2"><label>Ubicación (enlace de Google Maps)</label><input id="cfUbi" placeholder="https://maps.app.goo.gl/…"></div>
       <div style="grid-column:span 2"><label>Sedes y enlaces de reseñas de Google <small style="color:var(--muted)">(el que reciben los alumnos al aprobar, según su sede. Debe ser el de reseñas de esa sede, no el de Maps de las prácticas: pulsa «🔗 Probar»)</small></label>
         <div id="cfSedes"></div><button type="button" class="btn sec sm" id="cfSedeAdd">➕ Añadir sede</button></div>
@@ -998,7 +998,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "novaAgendaAutoescuela_v1";
-const VERSION = "v17.0 NOV26";
+const VERSION = "v17.1 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1256,9 +1256,7 @@ Examen de Circulación confirmado el día {fecha}; la hora está aún pendiente 
 5. Asistencia a urgencias hospitalarias que coincidan en fecha y hora con el examen`
 };
 /* Sedes de la autoescuela, cada una con su enlace de reseñas de Google */
-const SEDES_DEF=[
-  {nombre:"Sector B",resena:"https://www.google.com/search?q=autoescuela-lara-briones-sectorb&ludocid=13706060015020068430&ibp=gwp;0,7&source=g.page.m.we#lpg=cid:CgIgAQ%3D%3D"},
-  {nombre:"Pueblo",resena:"https://share.google/Gp7K8HCLyzSaTTGXQ"}];
+const SEDES_DEF=[{nombre:"Sede principal",resena:""}];   // v17.1: sin datos de ninguna autoescuela real; cada cliente pone las suyas en ⚙️
 function sedes(){ return db.config.sedes&&db.config.sedes.length?db.config.sedes:SEDES_DEF; }
 function sedeDe(a){ return sedes().find(x=>x.nombre===a.sede)||null; }
 /* Aprobado final: el último examen práctico de su permiso (B práctico · AM destreza · A1/A2 circulación) */
@@ -3086,8 +3084,6 @@ function normalizar(){
   db.alumnos.forEach(a=>TEORICOS.forEach(k=>{ if(a.examenes) delete a.examenes[k]; if(a.horasEx) delete a.horasEx[k];
     if(a.resultados&&a.resultados[k]&&a.resultados[k]!=="apto") delete a.resultados[k];
     if(a.historial) a.historial=a.historial.filter(h=>h.k!==k); }));
-  if(!db.config.lugar) db.config.lugar="Ciudad Santander";
-  if(!db.config.ubicacion) db.config.ubicacion="https://maps.app.goo.gl/vSFvYUKzbz45hx5V9";
   if(!db.config.sedes||!db.config.sedes.length) db.config.sedes=SEDES_DEF.map(x=>Object.assign({},x));
   db.alumnos.forEach(a=>{ a.examenes=a.examenes||{}; a.horasEx=a.horasEx||{}; a.resultados=a.resultados||{}; a.historial=a.historial||[]; a.cargos=a.cargos||[]; a.pagos=a.pagos||[]; });
   const NT={"Circuito cerrado":"Destreza","Maniobras":"Destreza","Vía pública":"Circulación"};
@@ -3228,7 +3224,7 @@ function pintarSedes(val){
   if(val&&!l.some(x=>x.nombre===val)) $("selSede").innerHTML+=`<option>${esc(val)}</option>`;
   $("selSede").value=val||"";
 }
-/* v13.6: la autoescuela (Sector B / Pueblo) se guarda en el alumno AL MOMENTO de elegirla, sin tener que pulsar «Guardar alumno» */
+/* v13.6: la autoescuela (sede) se guarda en el alumno AL MOMENTO de elegirla, sin tener que pulsar «Guardar alumno» */
 $("selSede").onchange=()=>{ const a=actual&&alumno(actual);
   if(!a){ cambiosFicha=true; return; }               // alumno nuevo aún sin guardar: se guarda con «Guardar alumno»
   a.sede=$("selSede").value; persistir(); pintarLista(); pintarBienvenida();
