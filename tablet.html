@@ -399,6 +399,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <div style="font-size:34px">🚗</div>
     <h2>Agenda Autoescuela</h2>
     <p>Introduce el PIN de acceso</p>
+    <p id="pinIni" class="hidden" style="margin:-4px 0 10px;background:#fff7e0;border:1px solid #f0c36d;border-radius:8px;padding:6px 8px;font-size:13px;color:#5a3d00">PIN inicial: <b>5555</b>. Cámbialo después en ⚙️ Autoescuela → «Cambiar PIN».</p>
     <div class="pindots" id="pinDots"><span></span><span></span><span></span><span></span></div>
     <div class="pinpad" id="pinPad">
       <button>1</button><button>2</button><button>3</button>
@@ -421,7 +422,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <button data-v="plan">📅 Plan semanal</button>
     <button data-v="avisos">📲 Avisos WhatsApp</button>
   </nav>
-  <span class="badge hidden" id="badgeEj" title="Datos inventados para probar. Al dar de alta un alumno real te ofrecerá borrarlos.">DATOS DE EJEMPLO</span>
+  <button type="button" class="badge hidden" id="badgeEj" style="border:0;cursor:pointer" title="Datos inventados para probar la agenda. Pulsa para borrarlos.">🧪 DATOS DE EJEMPLO · 🗑 Borrar</button>
   <div class="spacer"></div>
   <button class="hdrbtn" id="btnConfig" title="Nombre y teléfono de la autoescuela para la firma de los WhatsApp">⚙️<span class="lbl"> Autoescuela</span></button>
   <button class="hdrbtn" id="btnGuardar" title="Descarga un fichero .json con toda la base de datos">💾<span class="lbl"> Guardar base de datos</span></button>
@@ -445,6 +446,10 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 <div class="banner hidden" id="avisoInforme" style="background:#eef8ee;border-color:#9fd3a8;color:#1d4d27">
   <span id="avisoInformeTxt"></span><span class="spacer"></span>
   <button class="btn sm" id="aiIr">📊 Preparar informe</button><button class="btn sm sec" id="aiLuego">Más tarde</button>
+</div>
+<div class="banner hidden" id="avisoEj" style="background:#eefaf2;border-color:#8fd3a8;color:#14522d">
+  <span>👀 <b>¿Quieres ver cómo funciona?</b> Carga 9 alumnos de ejemplo con sus clases y exámenes. Cuando quieras empezar con los tuyos, se borran con un toque.</span><span class="spacer"></span>
+  <button class="btn sm" id="avEjCargar">Cargar alumnos de ejemplo</button><button class="btn sm sec" id="avEjNo">No, gracias</button>
 </div>
 <div class="banner hidden" id="avisoLic" style="background:#eef3fb;border-color:#9cb6dc;color:#163a69;font-weight:600">
   <span id="avisoLicTxt"></span><span class="spacer"></span>
@@ -997,7 +1002,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "novaAgendaAutoescuela_v1";
-const VERSION = "v17.1 NOV26";
+const VERSION = "v17.3 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1058,7 +1063,7 @@ function guardarYa(){
    Solo se actualiza abriendo una copia de la tablet («📂 Abrir»). Se activa/desactiva en ⚙️ Autoescuela (pide el PIN para quitarlo). */
 function soloConsulta(){ try{ return localStorage.getItem("novaSoloConsulta")==="1"; }catch(e){ return false; } }
 let permitirGuardar=false;
-function persistir(){
+function persistir(){ try{ if(db.alumnos.length) $("avisoEj").classList.add("hidden"); }catch(e){}
   if(soloConsulta()&&!permitirGuardar) return;    // en modo consulta no se graba nada (salvo al abrir una copia)
   sinGuardar = true;
   if(!datosListos) return;                      // nunca se graba antes de haber leído los datos guardados
@@ -1109,7 +1114,7 @@ $("fileDB").onchange=e=>{
     try{
       const o=JSON.parse(r.result);
       if(!o||!Array.isArray(o.alumnos)||!Array.isArray(o.clases)) throw 0;
-      if(db.alumnos.length && !db.ejemplo && !confirm("Se sustituirán los datos actuales por los del fichero. ¿Continuar?")) return;
+      if(db.alumnos.some(a=>!a.ej) && !confirm("Se sustituirán los datos actuales por los del fichero. ¿Continuar?")) return;
       const pinPrevio=db.config&&db.config.pinHash; db=o; if(db.config&&!db.config.pinHash&&pinPrevio) db.config.pinHash=pinPrevio; normalizar(); purgarEjemplos(); copiaPospuesta=false; permitirGuardar=true; persistir(); sinGuardar=false; nuevaFicha(); refrescarTodo(); toast("Cargados "+db.alumnos.length+" alumnos y "+db.clases.length+" clases.");
     }catch(x){ alert("El fichero no es una base de datos válida de la agenda."); }
   };
@@ -1482,10 +1487,9 @@ $("btnGuardarAlumno").onclick=guardarAlumno;
 
 function guardarAlumno(){
   const req=["nombre","apellidos"]; for(const k of req) if(!F[k].value.trim()){ F[k].focus(); alert("Rellena los campos obligatorios (*)."); return false; }
-  if(db.ejemplo && !actual){
-    if(confirm("Están cargados los datos de EJEMPLO.\n\n¿Quieres borrarlos antes de dar de alta este alumno real?")){
-      db=sinEjemplos();
-      rellenarSelectsFicha("","");
+  if(db.ejemplo && hayEjemplos() && !actual){
+    if(confirm("Están cargados los datos de EJEMPLO.\n\n¿Quieres borrarlos antes de dar de alta este alumno real?\n(Si no, los puedes borrar cuando quieras con el botón amarillo «🗑 Borrar» de arriba.)")){
+      borrarEjemplos(true); rellenarSelectsFicha("","");
     }
     db.ejemplo=false; actualizarBadge();
   }
@@ -3206,7 +3210,7 @@ function pintarMedios(){
       <td class="row"><button class="btn sec sm" onclick="editarVeh('${v.id}')">Editar</button><button class="btn del sm" onclick="borrarVeh('${v.id}')">Borrar</button></td></tr>`).join("")
     :`<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px">Sin vehículos. Rellena el formulario de arriba.</td></tr>`);
 }
-function actualizarBadge(){ $("badgeEj").classList.toggle("hidden",!db.ejemplo); }
+function actualizarBadge(){ $("badgeEj").classList.toggle("hidden",!hayEjemplos()); if(typeof pintarAvisoEj==="function") pintarAvisoEj(); }
 
 /* ================== WHATSAPP ================== */
 const DIA_LARGO=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
@@ -3343,7 +3347,7 @@ function waAbrir(a,texto,key){
   texto=conNombre(texto,a);
   const n=telWa(a&&a.tel);
   if(!n){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
-  if(db.ejemplo && !confirm("Son datos de EJEMPLO con un teléfono ficticio.\nPara probar, pon tu propio móvil en la ficha de ese alumno.\n\n¿Abrir WhatsApp igualmente?")) return;
+  if(a&&a.ej && !confirm("Es un alumno de EJEMPLO con un teléfono ficticio.\nPara probar, pon tu propio móvil en la ficha de ese alumno.\n\n¿Abrir WhatsApp igualmente?")) return;
   window.open("https://api.whatsapp.com/send?phone="+n+"&text="+encodeURIComponent(texto),"_blank");
   if(key){ const d=new Date(), t=fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
     [].concat(key).forEach(k=>db.avisos[k]=t); persistir(); }
@@ -3506,15 +3510,63 @@ function sinEjemplos(){
 const EJ_DNI=[51234567,48765432,53456789,54987123,50321654].map(n=>n+"TRWAGMYFPDXBNJZSQVHLCKE"[n%23]);
 function purgarEjemplos(){
   const ids=new Set(db.alumnos.filter(a=>EJ_DNI.includes(a.dni)).map(a=>a.id));
-  if(!ids.size&&!db.ejemplo) return false;
+  if(!ids.size) return false;   // v17.3: solo ejemplos antiguos; los nuevos (ej:true) se quedan hasta que el usuario los borre
   db.alumnos=db.alumnos.filter(a=>!ids.has(a.id));
   db.clases=db.clases.filter(c=>!ids.has(c.alumnoId));
   const usP=new Set([...db.alumnos.map(a=>a.profesor),...db.clases.map(c=>c.profesor)]);
   const usV=new Set([...db.alumnos.map(a=>a.vehiculo),...db.clases.map(c=>c.vehiculo)]);
   db.profesores=db.profesores.filter(p=>!EJ_PROF.includes(p.nombre)||usP.has(p.nombre));
   db.vehiculos=db.vehiculos.filter(v=>!EJ_MAT.includes(v.matricula)||usV.has(etiquetaVeh(v)));
-  db.ejemplo=false; return true;
+  return true;
 }
+/* v17.3: DATOS DE EJEMPLO para la prueba. Alumnos, profesor y vehículos marcados con ej:true; las clases van
+   de esta semana (las de días pasados, ya dadas) a la semana que viene. Se borran con el botón «🗑 Borrar ejemplos» de la cabecera
+   o al dar de alta el primer alumno real; los datos reales nunca se tocan. */
+function hayEjemplos(){ return db.alumnos.some(a=>a.ej)||(db.profesores||[]).some(p=>p.ej)||(db.vehiculos||[]).some(v=>v.ej); }
+function cargarEjemplos(){
+  if(db.alumnos.some(a=>!a.ej)&&!confirm("Ya tienes alumnos reales. Los de ejemplo se añadirán junto a ellos (luego se pueden borrar).\n\n¿Cargar los datos de ejemplo?")) return;
+  if(hayEjemplos()){ toast("Los datos de ejemplo ya están cargados."); return; }
+  const prof="Profesor de ejemplo", sede=(sedes()[0]||{}).nombre||"";
+  const VEH=[["B","Seat Ibiza","0001-EJM"],["A2","Honda CB500F","0002-EJM"],["A1","Yamaha MT-125","0003-EJM"],["AM","Scooter 49 cc","C-0004-EJM"]];
+  const vehs=VEH.map(([p,m,mt])=>({id:uid(),permiso:p,modelo:m,matricula:mt,itv:addDias(hoy(),300),obs:"Vehículo de ejemplo",activo:true,ej:true}));
+  const vehDe=p=>etiquetaVeh(vehs.find(v=>v.permiso===p));
+  db.profesores=(db.profesores||[]).concat([{id:uid(),nombre:prof,tel:"600000000",permisos:["B","AM","A1","A2"],activo:true,ej:true}]);
+  db.vehiculos=(db.vehiculos||[]).concat(vehs);
+  const NOM=[["Lucía","Martín Soler","B"],["Hugo","Navarro Ruiz","B"],["Carmen","Ortega Vidal","B"],["Daniel","Molina Prieto","A2"],["Paula","Castro León","B"],
+             ["Álvaro","Rubio Sanz","AM"],["Marta","Iglesias Peña","B"],["Sergio","Delgado Ramos","A1"],["Irene","Vega Campos","B"]];
+  const als=NOM.map(([n,ap,p],i)=>({id:uid(),nombre:n.toUpperCase(),apellidos:ap.toUpperCase(),dni:"",fnac:"",tel:"600000"+(100+i),email:"",dir:"",
+    permiso:p,alta:addDias(hoy(),-30+i),profesor:prof,vehiculo:vehDe(p),obs:"Alumno de ejemplo",foto:"",examenes:{},horasEx:{},resultados:{},
+    nuevo:false,sede,msgs:{},historial:[],cargos:[{id:uid(),fecha:addDias(hoy(),-30+i),concepto:"Bono inicial",clases:10}],pagos:[],ej:true}));
+  const proxLun=addDias(lunesDe(hoy()),7), fin=addDias(proxLun,4);
+  als[0].examenes={practico:addDias(proxLun,3)}; als[0].horasEx={practico:"09:30"}; als[0].resultados={teorico:"apto"};
+  als[3].examenes={via:addDias(proxLun,4)}; als[3].horasEx={via:"11:00"}; als[3].resultados={comun:"apto",especifico:"apto"};
+  const HORAS_EJ=["16:00","16:45","17:30","18:15","19:00"];
+  const clases=[]; let k=0;
+  for(let d=lunesDe(hoy()); d<=fin; d=addDias(d,1)){
+    const w=parse(d).getDay(); if(w===0||w===6) continue;
+    HORAS_EJ.forEach(h=>{ const a=als[k%als.length]; k++; const moto=esMoto(a.permiso);
+      clases.push({id:uid(),alumnoId:a.id,fecha:d,hora:h,durMin:moto?30:45,tipo:a.permiso==="AM"||(moto&&k%2)?"Destreza":(k%7===0?"Simulacro examen":"Circulación"),
+        profesor:prof,vehiculo:a.vehiculo,obs:"",estado:d<hoy()?"realizada":""}); });
+  }
+  db.alumnos=db.alumnos.concat(als); db.clases=db.clases.concat(clases); db.ejemplo=true;
+  persistir(); refrescarTodo(); toast("Cargados 9 alumnos de ejemplo con sus clases. Mira «Clases prácticas».");
+}
+function borrarEjemplos(sinPreguntar){
+  if(!hayEjemplos()) return;
+  if(!sinPreguntar&&!confirm("¿Borrar todos los datos de EJEMPLO (alumnos, sus clases, el profesor y los vehículos de ejemplo)?\n\nTus datos reales no se tocan.")) return;
+  const ids=new Set(db.alumnos.filter(a=>a.ej).map(a=>a.id));
+  db.alumnos=db.alumnos.filter(a=>!a.ej); db.clases=db.clases.filter(c=>!ids.has(c.alumnoId));
+  db.profesores=(db.profesores||[]).filter(p=>!p.ej); db.vehiculos=(db.vehiculos||[]).filter(v=>!v.ej);
+  Object.values(db.planes||{}).forEach(P=>["preg","resp"].forEach(x=>{ if(P[x]) ids.forEach(id=>delete P[x][id]); }));
+  db.ejemplo=false; if(actual&&ids.has(actual)) actual=null;
+  persistir(); refrescarTodo(); if(!sinPreguntar){ try{ localStorage.setItem("novaEjNo","1"); }catch(e){} pintarAvisoEj(); nuevaFicha(); toast("Datos de ejemplo borrados. Ya puedes dar de alta tus alumnos."); }
+}
+function pintarAvisoEj(){ let no=false; try{ no=localStorage.getItem("novaEjNo")==="1"; }catch(e){}
+  $("avisoEj").classList.toggle("hidden",no||db.alumnos.length>0); }
+$("avEjCargar").onclick=()=>{ cargarEjemplos(); pintarAvisoEj(); };
+$("avEjNo").onclick=()=>{ try{ localStorage.setItem("novaEjNo","1"); }catch(e){} pintarAvisoEj(); };
+$("badgeEj").onclick=()=>borrarEjemplos(false);
+
 
 /* Versión instalable (Android): solo se activa cuando la app se sirve desde una web https */
 if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost")){
@@ -3614,6 +3666,8 @@ function pintarAvisoLic(){
   if(PEDIR_ACTIVACION&&(st.tipo==="caducada"||st.tipo==="fin_prueba")) abrirLicencia(false);
   pintarAvisoLic(); setInterval(pintarAvisoLic,6*3600e3);
 })();
+/* v17.2: mientras siga el PIN de fábrica, se muestra cuál es */
+try{ if(pinGuardado()===PIN_HASH) $("pinIni").classList.remove("hidden"); }catch(e){}
 (function(){
   let pin="", fallos=0;
   const dots=[...$("pinDots").children];
@@ -3930,6 +3984,7 @@ $("verApp").textContent=VERSION; aplicarConsulta();
 (async()=>{
   await cargarDatos(); normalizar();
   if(purgarEjemplos()) persistir();
+  pintarAvisoEj();
   sinGuardar=false; nuevaFicha(); refrescarTodo(); avisoMiercoles();
 })();
 </script>
