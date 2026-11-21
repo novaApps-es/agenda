@@ -429,7 +429,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   <button class="hdrbtn" id="btnAbrir" title="Carga un fichero .json guardado anteriormente">📂<span class="lbl"> Abrir</span></button>
   <button class="hdrbtn" id="btnEnviar" title="Copia de seguridad de todos los datos para guardarla fuera de la tablet (Drive, correo, WhatsApp). No se lee: se recupera con «📂 Abrir»">📤<span class="lbl"> Enviar copia</span></button>
   <input type="file" id="fileDB" accept=".json,.txt,application/json,text/plain" class="hidden">
-  <span class="firma-app">Una app de <b>NovaApps</b><br><small id="verApp"></small></span>
+  <span class="firma-app">Una app de <b>NovaApps</b><br><small id="verApp"></small><br><small id="licApp" title="Ver o renovar la licencia" style="cursor:pointer;text-decoration:underline dotted"></small></span>
 </header>
 <div class="banner hidden" id="avisoConsulta" style="background:#eef3fb;border-color:#9cb6dc;color:#1f3d6b">
   <span>👁️ <b>Modo consulta:</b> este dispositivo solo sirve para mirar. Para ponerlo al día, «📂 Abrir» la última copia de la tablet.</span><span class="spacer"></span>
@@ -823,6 +823,18 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </div>
 </div>
 
+<div class="modal hidden" id="mEj" style="z-index:88">
+  <div class="box" style="width:min(480px,100%)">
+    <h3>🧪 Tienes cargados los alumnos de ejemplo</h3>
+    <p style="margin:0">Vas a dar de alta tu primer alumno real. ¿Qué hacemos con los datos de ejemplo?</p>
+    <div style="display:grid;gap:8px;margin-top:14px">
+      <button class="btn" id="mEjBorrar">🗑 Borrar los de ejemplo y guardar mi alumno</button>
+      <button class="btn sec" id="mEjMantener">Mantener los de ejemplo y guardar mi alumno</button>
+      <button class="btn sec" id="mEjVolver">↩ Volver a la ficha sin guardar</button>
+    </div>
+    <p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Si los mantienes, los puedes borrar cuando quieras con la etiqueta amarilla «🧪 DATOS DE EJEMPLO · 🗑 Borrar» de arriba. Tus alumnos reales nunca se borran.</p>
+  </div>
+</div>
 <div class="modal hidden" id="mAviso" style="z-index:90">
   <div class="box" style="width:min(460px,100%)">
     <h3>ℹ️ Aviso</h3>
@@ -866,15 +878,16 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 <div class="modal hidden" id="mConfig">
   <div class="box" style="width:min(520px,100%)">
     <h3>⚙️ Datos de la autoescuela</h3>
+    <p id="cfObligNota" class="hidden" style="margin:0 0 10px;background:#fff7e0;border:1px solid #f0c36d;border-radius:8px;padding:8px 10px;font-size:13.5px;color:#5a3d00">👋 <b>Para empezar</b>, rellena los campos marcados con <b>*</b>: nombre de la autoescuela, teléfono, al menos una sede y las clases del bono inicial.</p>
     <div class="g2">
-      <div style="grid-column:span 2"><label>Nombre (firma de los WhatsApp)</label><input id="cfNombre"></div>
-      <div style="grid-column:span 2"><label>Teléfono de contacto (opcional)</label><input id="cfTel" type="tel"></div>
+      <div style="grid-column:span 2"><label>Nombre de la autoescuela (firma de los WhatsApp) <b style="color:var(--err)">*</b></label><input id="cfNombre"></div>
+      <div style="grid-column:span 2"><label>Teléfono de contacto <b style="color:var(--err)">*</b></label><input id="cfTel" type="tel"></div>
       <div style="grid-column:span 2"><label>📅 Horario de tarde del Plan semanal (sale en la pregunta como {desde} y {hasta})</label>
         <div class="row" style="flex-wrap:nowrap;gap:6px"><span style="font-size:13px">de</span><input type="time" id="cfPlanDesde" step="900" style="width:130px"><span style="font-size:13px">a</span><input type="time" id="cfPlanHasta" step="900" style="width:130px"></div></div>
       <div style="grid-column:span 2"><label>📲 WhatsApp de la secretaría de la autoescuela (huecos, confirmados e informe del mes)</label><input id="cfTelSec" type="tel" placeholder="Ej.: 600 123 456"></div>
       <div style="grid-column:span 2"><label>Lugar de prácticas de moto</label><input id="cfLugar" placeholder="Ej.: Circuito municipal"></div>
       <div style="grid-column:span 2"><label>Ubicación (enlace de Google Maps)</label><input id="cfUbi" placeholder="https://maps.app.goo.gl/…"></div>
-      <div style="grid-column:span 2"><label>Sedes y enlaces de reseñas de Google <small style="color:var(--muted)">(el que reciben los alumnos al aprobar, según su sede. Debe ser el de reseñas de esa sede, no el de Maps de las prácticas: pulsa «🔗 Probar»)</small></label>
+      <div style="grid-column:span 2"><label>Sedes <b style="color:var(--err)">*</b> y enlaces de reseñas de Google <small style="color:var(--muted)">(el que reciben los alumnos al aprobar, según su sede. Debe ser el de reseñas de esa sede, no el de Maps de las prácticas: pulsa «🔗 Probar»)</small></label>
         <div id="cfSedes"></div><button type="button" class="btn sec sm" id="cfSedeAdd">➕ Añadir sede</button></div>
       <div style="grid-column:span 2"><button type="button" class="btn sec" id="cfTextos">✉️ Editar textos de los mensajes</button></div>
     </div>
@@ -893,7 +906,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <label class="chk"><input type="radio" name="cfBloq" value="todos"> No hay clases de mañana para nadie</label>
       <label style="display:block;margin-top:10px">Profesor por defecto</label><select id="cfProfDef" style="max-width:260px"></select>
       <label class="chk cfConsulta" style="margin-top:12px;font-weight:600"><input type="checkbox" id="cfConsulta" style="width:auto"> 👁️ Este dispositivo es solo de consulta (no se puede crear, cambiar ni enviar nada)</label>
-      <label style="display:block;margin-top:10px">Clases del bono para cada alumno nuevo (0 = ninguna)</label><input id="cfBonoIni" type="number" min="0" max="50" step="1" style="max-width:120px">
+      <label style="display:block;margin-top:10px">Clases del bono para cada alumno nuevo <b style="color:var(--err)">*</b></label><input id="cfBonoIni" type="number" min="1" max="50" step="1" style="max-width:120px">
       <label class="chk"><input type="radio" name="cfBloq" value="profesor"> Solo no da clases de mañana el profesor de ese alumno</label>
     </div>
     <div class="row" style="justify-content:flex-end;margin-top:16px">
@@ -1002,7 +1015,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "novaAgendaAutoescuela_v1";
-const VERSION = "v17.3 NOV26";
+const VERSION = "v17.4 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1487,12 +1500,14 @@ $("btnGuardarAlumno").onclick=guardarAlumno;
 
 function guardarAlumno(){
   const req=["nombre","apellidos"]; for(const k of req) if(!F[k].value.trim()){ F[k].focus(); alert("Rellena los campos obligatorios (*)."); return false; }
-  if(db.ejemplo && hayEjemplos() && !actual){
-    if(confirm("Están cargados los datos de EJEMPLO.\n\n¿Quieres borrarlos antes de dar de alta este alumno real?\n(Si no, los puedes borrar cuando quieras con el botón amarillo «🗑 Borrar» de arriba.)")){
-      borrarEjemplos(true); rellenarSelectsFicha("","");
-    }
-    db.ejemplo=false; actualizarBadge();
-  }
+  if(db.ejemplo && hayEjemplos() && !actual){ $("mEj").classList.remove("hidden"); return false; }   // v17.4: ventana con botones claros
+  // v17.4: sede, teléfono móvil y bono obligatorios
+  if(!$("selSede").value&&sedes().length===1){ $("selSede").value=sedes()[0].nombre; }
+  if(!$("selSede").value){ alert("Elige la autoescuela (sede) del alumno, arriba en la ficha."); $("selSede").focus(); return false; }
+  if(!telWa(F.tel.value)){ alert("Escribe un teléfono móvil válido para el alumno (se usa para los avisos por WhatsApp)."); F.tel.focus(); return false; }
+  { const pv=actual&&alumno(actual); if(!((pv&&pv.cargos&&pv.cargos.length)||(!pv&&Number(db.config.bonoInicial)>0))){
+      alert(pv?"Este alumno no tiene ningún bono. Añádele un bono o clases en su ficha (apartado de bonos) antes de guardar."
+              :"Falta el bono inicial de clases. Ponlo en ⚙️ Autoescuela («Clases del bono para cada alumno nuevo»)."); return false; } }
   const dni=F.dni.value.trim().toUpperCase();
   const dup=dni&&db.alumnos.find(a=>a.dni===dni&&a.id!==actual);
   if(dup){ alert("Ya existe un alumno con el DNI/NIE "+dni+": "+nombreCompleto(dup)); return false; }
@@ -3487,15 +3502,24 @@ $("cfGuardar").onclick=()=>{
     if(pn!==pr){ alert("El PIN nuevo y su repetición no coinciden."); return; }
     db.config.pinHash=hashPin(pn); try{ localStorage.setItem("novaPin",db.config.pinHash); }catch(e){} pinCambiado=true;
   }
+  { const falta=[]; if(!$("cfNombre").value.trim()) falta.push("el nombre de la autoescuela");
+    if($("cfTel").value.replace(/\D/g,"").length<9) falta.push("un teléfono de contacto válido");
+    if(!leerCfSedes().length) falta.push("al menos una sede (pulsa «➕ Añadir sede» y escribe su nombre)");
+    if(!(parseInt($("cfBonoIni").value||"0",10)>0)) falta.push("las clases del bono inicial (1 o más)");
+    if(falta.length){ alert("Para guardar falta:\n\n• "+falta.join("\n• ")); return; } }
   db.config.sedes=leerCfSedes();
   { const u=$("cfUbi").value.trim(), mal=db.config.sedes.filter(x=>x.resena&&u&&x.resena.trim()===u);
     if(mal.length) alert(`Ojo: el enlace de reseñas de ${mal.map(x=>"«"+x.nombre+"»").join(" y ")} es el mismo que la ubicación de las prácticas. Pon el enlace de reseñas de Google de esa sede.`); } if(actual) pintarSedes($("selSede").value);
   db.config=Object.assign(db.config,{nombre:$("cfNombre").value.trim()||"Autoescuela",tel:$("cfTel").value.trim(),telSec:$("cfTelSec").value.trim(),planDesde:$("cfPlanDesde").value||"15:30",planHasta:$("cfPlanHasta").value||"20:00",lugar:$("cfLugar").value.trim(),ubicacion:$("cfUbi").value.trim(),
     bloqueoExamen:document.querySelector("input[name=cfBloq]:checked").value, profDefecto:$("cfProfDef").value||db.config.profDefecto||"", bonoInicial:Math.max(0,parseInt($("cfBonoIni").value||"0",10)||0)});
-  $("mConfig").classList.add("hidden"); persistir(); horarioPlanIni(); if(vista==="plan") pintarPlan(); pintarSec(); pintarPagos(); pintarLista(); pintarAgenda(); toast(pinCambiado?"Guardado. PIN cambiado: úsalo la próxima vez que abras la app.":"Datos de la autoescuela guardados.");
+  $("mConfig").classList.add("hidden"); $("cfCancelar").classList.remove("hidden"); $("cfObligNota").classList.add("hidden"); persistir(); horarioPlanIni(); if(vista==="plan") pintarPlan(); pintarSec(); pintarPagos(); pintarLista(); pintarAgenda(); toast(pinCambiado?"Guardado. PIN cambiado: úsalo la próxima vez que abras la app.":"Datos de la autoescuela guardados.");
 };
 /* v11.5: quitado el botón «Vaciar todo» del Listado (peligroso) */
 
+/* v17.4: la configuración básica es obligatoria antes de usar la agenda */
+function configCompleta(){ const c=db.config||{}; return !!(c.nombre&&String(c.tel||"").replace(/\D/g,"").length>=9&&(c.sedes||[]).some(s=>s.nombre)&&Number(c.bonoInicial)>0); }
+function exigirConfig(){ if(document.getElementById("pinGate")||configCompleta()) return;
+  $("btnConfig").onclick(); $("cfCancelar").classList.add("hidden"); $("cfObligNota").classList.remove("hidden"); }
 /* ================== DATOS DE EJEMPLO ================== */
 const EJ_PROF=["Carlos Martín","Pedro Sanz","Ana López","Rosa Iglesias"], EJ_MAT=["1234 LMN","5678 KJH","2468 HGT","9012 MPR","3456 NBC"];
 /* Base vacía: quita alumnos, clases y avisos, y los profesores/vehículos de ejemplo; conserva los dados de alta por el usuario */
@@ -3566,6 +3590,9 @@ function pintarAvisoEj(){ let no=false; try{ no=localStorage.getItem("novaEjNo")
 $("avEjCargar").onclick=()=>{ cargarEjemplos(); pintarAvisoEj(); };
 $("avEjNo").onclick=()=>{ try{ localStorage.setItem("novaEjNo","1"); }catch(e){} pintarAvisoEj(); };
 $("badgeEj").onclick=()=>borrarEjemplos(false);
+$("mEjBorrar").onclick=()=>{ $("mEj").classList.add("hidden"); borrarEjemplos(true); db.ejemplo=false; rellenarSelectsFicha("",""); actualizarBadge(); guardarAlumno(); };
+$("mEjMantener").onclick=()=>{ $("mEj").classList.add("hidden"); db.ejemplo=false; actualizarBadge(); guardarAlumno(); };
+$("mEjVolver").onclick=()=>$("mEj").classList.add("hidden");
 
 
 /* Versión instalable (Android): solo se activa cuando la app se sirve desde una web https */
@@ -3607,11 +3634,15 @@ function firmaLicencia(d,e){
   const a=parseInt(hashPin("NOVA·LIC·"+d+"·"+e+"·q3"),16)%10000, b=parseInt(hashPin("NOVA·q3·"+e+"·"+d),16)%10000;
   return String(a).padStart(4,"0")+"-"+String(b).padStart(4,"0");
 }
-function finLicencia(e){ if(e==="9999") return null; const y=2000+ +e.slice(0,2), m=+e.slice(2,4); return iso(new Date(y,m,0)); }   // último día del mes
+function finLicencia(e){ if(e==="9999"||e==="999999") return null; const y=2000+ +e.slice(0,2), m=+e.slice(2,4);
+  if(e.length===6) return iso(new Date(y,m-1,+e.slice(4,6)));   // v17.4: día exacto (AAMMDD)
+  return iso(new Date(y,m,0)); }   // códigos antiguos AAMM: último día del mes
+function fechaLicOk(e){ if(e==="9999"||e==="999999") return true; const m=+e.slice(2,4); if(m<1||m>12) return false;
+  if(e.length===4) return true; const d=+e.slice(4,6), y=2000+ +e.slice(0,2); return d>=1&&d<=new Date(y,m,0).getDate(); }
 function leerLicencia(){
   let v=""; try{ v=localStorage.getItem(ACT_KEY)||""; }catch(e){}
   if(v===ACT_HASH) return {ok:true,fin:null,maestra:true};
-  const m=/^L:(\d{4}):(\d{4}-\d{4})$/.exec(v); if(!m) return null;
+  const m=/^L:(\d{4}|\d{6}):(\d{4}-\d{4})$/.exec(v); if(!m) return null;
   if(firmaLicencia(numDispositivo(),m[1])!==m[2]) return null;
   return {ok:true,e:m[1],fin:finLicencia(m[1])};
 }
@@ -3640,6 +3671,9 @@ function pintarAvisoLic(){
   if(st.tipo==="prueba") txt=`🎁 Versión de prueba: te quedan ${st.quedan} día(s). Pide tu licencia a NovaApps cuando quieras.`;
   else if(st.tipo==="activa"&&st.fin&&st.quedan<=AVISO_CADUCA_DIAS) txt=`🔑 Tu licencia caduca el ${fmt(st.fin)} (${st.quedan} día(s)). Pide la renovación a NovaApps.`;
   $("avisoLicTxt").textContent=txt; $("avisoLic").classList.toggle("hidden",!txt);
+  /* v17.4: la fecha de la licencia siempre a la vista, bajo la versión (arriba a la derecha) */
+  $("licApp").textContent=st.tipo==="prueba"?`🎁 Prueba: ${st.quedan} día(s)`:st.tipo==="activa"?(st.fin?`🔑 Licencia hasta ${fmt(st.fin)}`:"🔑 Licencia sin caducidad")
+    :st.tipo==="caducada"?`⛔ Licencia caducada (${fmt(st.fin)})`:"⛔ Prueba terminada";
 }
 (function(){
   const disp=numDispositivo();
@@ -3647,15 +3681,14 @@ function pintarAvisoLic(){
   $("actCopiar").onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(disp):Promise.reject()).then(()=>toast("Número copiado."),()=>prompt("Copia el número:",disp)); };
   $("actCopia").onclick=()=>{ try{ $("btnGuardar").click(); }catch(e){ alert("No se ha podido descargar la copia."); } };
   $("actCerrar").onclick=()=>$("actGate").classList.add("hidden");
-  $("avLicAct").onclick=()=>abrirLicencia(true);
+  $("avLicAct").onclick=()=>abrirLicencia(true); $("licApp").onclick=()=>abrirLicencia(true);
   let fallos=0;
   const probar=()=>{ const v=$("actCod").value.trim().toLowerCase(), dig=v.replace(/\D/g,"");
     let guardar="";
     if(v&&hashPin("ACT:"+v)===ACT_HASH) guardar=ACT_HASH;   // clave maestra de NovaApps (demostraciones)
-    else if(dig.length===12){ const e=dig.slice(0,4), f=dig.slice(4,8)+"-"+dig.slice(8);
-      const mesOk=e==="9999"||(+e.slice(2,4)>=1&&+e.slice(2,4)<=12);
-      if(mesOk&&firmaLicencia(disp,e)===f){
-        if(e!=="9999"&&diasHasta(finLicencia(e))<0){ $("actMsg").textContent="Ese código ya está caducado ("+fmt(finLicencia(e))+")."; return; }
+    else if(dig.length===12||dig.length===14){ const n=dig.length-8, e=dig.slice(0,n), f=dig.slice(n,n+4)+"-"+dig.slice(n+4);
+      if(fechaLicOk(e)&&firmaLicencia(disp,e)===f){
+        if(finLicencia(e)&&diasHasta(finLicencia(e))<0){ $("actMsg").textContent="Ese código ya está caducado ("+fmt(finLicencia(e))+")."; return; }
         guardar="L:"+e+":"+f; } }
     if(guardar){ try{ localStorage.setItem(ACT_KEY,guardar); }catch(e){}
       $("actGate").classList.add("hidden"); $("actCod").value=""; pintarAvisoLic();
@@ -3676,7 +3709,7 @@ try{ if(pinGuardado()===PIN_HASH) $("pinIni").classList.remove("hidden"); }catch
     if(k==="borrar") pin=pin.slice(0,-1); else if(k==="limpiar") pin=""; else if(pin.length<PIN_LARGO) pin+=k;
     pintar(); $("pinMsg").textContent="";
     if(pin.length===PIN_LARGO){
-      if(hashPin(pin)===pinGuardado()){ $("pinGate").remove(); document.removeEventListener("keydown",teclado); avisoMiercoles(); }
+      if(hashPin(pin)===pinGuardado()){ $("pinGate").remove(); document.removeEventListener("keydown",teclado); avisoMiercoles(); if(datosListos) exigirConfig(); }
       else{ fallos++; $("pinDots").classList.add("mal"); $("pinMsg").textContent="PIN incorrecto"+(fallos>2?" ("+fallos+" intentos)":"");
         setTimeout(()=>{ $("pinDots").classList.remove("mal"); pin=""; pintar(); },400); }
     }
@@ -3984,7 +4017,7 @@ $("verApp").textContent=VERSION; aplicarConsulta();
 (async()=>{
   await cargarDatos(); normalizar();
   if(purgarEjemplos()) persistir();
-  pintarAvisoEj();
+  pintarAvisoEj(); exigirConfig();
   sinGuardar=false; nuevaFicha(); refrescarTodo(); avisoMiercoles();
 })();
 </script>

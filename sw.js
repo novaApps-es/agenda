@@ -2,7 +2,7 @@
 // Con Internet: descarga SIEMPRE la versión más reciente publicada (sin usar copias viejas).
 // Sin Internet, o con la web cerrada temporalmente: usa la última copia guardada en el dispositivo.
 // Los datos de los alumnos NO pasan por aquí: están guardados aparte en el dispositivo.
-const CACHE = "novaapps-agenda-autoescuela-v17-3";
+const CACHE = "novaapps-agenda-autoescuela-v17-4";
 const FICHEROS = ["./", "./index.html", "./tablet.html", "./manifest.webmanifest",
                   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"];
 
