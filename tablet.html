@@ -391,6 +391,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <div id="actMsg" style="color:var(--err);font-size:13px;min-height:18px;margin-top:8px"></div>
     <button type="button" class="btn sec sm hidden" id="actCopia" style="width:100%;margin-top:4px">💾 Descargar copia de mis datos</button>
     <button type="button" class="btn sec sm hidden" id="actCerrar" style="width:100%;margin-top:6px">Seguir con la prueba gratuita</button>
+    <button type="button" class="btn sec sm hidden" id="actTraspaso" style="width:100%;margin-top:6px">🔁 Traspasar la licencia a otra tablet</button>
     <div class="pfirma">NovaApps</div>
   </div>
 </div>
@@ -823,6 +824,19 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </div>
 </div>
 
+<div class="modal hidden" id="mBaja" style="z-index:120">
+  <div class="box" style="width:min(440px,100%);text-align:center">
+    <h3>🔁 Licencia dada de baja en esta tablet</h3>
+    <p style="margin:0 0 10px">Envía estos datos a NovaApps junto con el número de tu tablet nueva para recibir allí tu licencia con los mismos días.</p>
+    <div style="background:#eef3fb;border:1px solid #9cb6dc;border-radius:10px;padding:10px;text-align:left;font-size:14px;line-height:1.7">
+      Tablet antigua: <b id="bjDisp" style="font-family:ui-monospace,Consolas,monospace"></b><br>
+      Licencia: <b id="bjLic" style="font-family:ui-monospace,Consolas,monospace"></b><br>
+      Código de baja: <b id="bjCod" style="font:700 20px ui-monospace,Consolas,monospace;color:var(--pri)"></b>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:12px;gap:8px"><button class="btn wa" id="bjWa">📲 Enviar por WhatsApp</button><button class="btn sec" id="bjCerrar">Cerrar</button></div>
+    <p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Puedes volver a ver estos datos desde «🔑 Introducir licencia» en esta tablet.</p>
+  </div>
+</div>
 <div class="modal hidden" id="mEj" style="z-index:88">
   <div class="box" style="width:min(480px,100%)">
     <h3>🧪 Tienes cargados los alumnos de ejemplo</h3>
@@ -1015,7 +1029,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "novaAgendaAutoescuela_v1";
-const VERSION = "v17.4 NOV26";
+const VERSION = "v17.5 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -3656,15 +3670,39 @@ function estadoLicencia(){
   return quedan>0?{tipo:"prueba",quedan}:{tipo:"fin_prueba"};
 }
 function dispositivoActivado(){ return estadoLicencia().tipo==="activa"; }
+/* v17.5: TRASPASO CON CÓDIGO DE BAJA. La tablet vieja borra su licencia, la apunta como dada de baja (no se puede
+   volver a meter aquí) y da un código de baja que el generador comprueba antes de dar la licencia a la tablet nueva. */
+const BAJA_KEY="novaLicBajas", ULT_BAJA_KEY="novaUltimaBaja";
+function firmaBaja(d,e,f){ const a=parseInt(hashPin("NOVA·BAJA·"+d+"·"+e+"·"+f+"·z8"),16)%10000, b=parseInt(hashPin("NOVA·z8·"+f+"·"+e+"·"+d),16)%10000;
+  return String(a).padStart(4,"0")+"-"+String(b).padStart(4,"0"); }
+function bajas(){ try{ return JSON.parse(localStorage.getItem(BAJA_KEY)||"[]"); }catch(e){ return []; } }
+function mostrarBaja(b){ $("bjDisp").textContent=b.disp; $("bjLic").textContent=b.e+"-"+b.f; $("bjCod").textContent=b.cod;
+  $("bjWa").onclick=()=>window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(`Hola NovaApps, quiero traspasar mi licencia de la Agenda Autoescuela a otra tablet.\nTablet antigua: ${b.disp}\nLicencia: ${b.e}-${b.f}\nCódigo de baja: ${b.cod}\nNúmero de la tablet nueva: `),"_blank");
+  $("mBaja").classList.remove("hidden"); }
+function traspasarLicencia(){
+  let v=""; try{ v=localStorage.getItem(ACT_KEY)||""; }catch(e){}
+  const m=/^L:(\d{4}|\d{6}):(\d{4}-\d{4})$/.exec(v); if(!m){ alert("Esta tablet no tiene una licencia que se pueda traspasar."); return; }
+  if(!confirm("🔁 TRASPASAR LA LICENCIA\n\nLa licencia se QUITA de esta tablet y ya no se podrá volver a usar aquí. Te daremos un código de baja para pasarla a tu tablet nueva con los mismos días.\n\nAntes, haz una copia de tus datos («📤 Enviar copia») para abrirla en la tablet nueva.\n\n¿Traspasar ahora?")) return;
+  const disp=numDispositivo(), b={disp,e:m[1],f:m[2],cod:firmaBaja(disp,m[1],m[2]),fecha:hoy()};
+  try{ const l=bajas(); l.push(m[1]+":"+m[2]); localStorage.setItem(BAJA_KEY,JSON.stringify(l)); localStorage.setItem(ULT_BAJA_KEY,JSON.stringify(b));
+    localStorage.setItem(PRUEBA_KEY,"2000-01-01"); localStorage.removeItem(ACT_KEY); }catch(e){}
+  pintarAvisoLic(); abrirLicencia(false); mostrarBaja(b);
+}
 function abrirLicencia(cerrable){
   const st=estadoLicencia(), disp=numDispositivo(); $("actDisp").textContent=disp;
   if(st.tipo==="caducada"){ $("actTit").textContent="Licencia caducada"; $("actIntro").textContent=`Tu licencia terminó el ${fmt(st.fin)}. Tus datos siguen guardados en este dispositivo: al renovar, aparece todo igual.`; }
+  else if(st.tipo==="fin_prueba"&&(()=>{ try{ return !!localStorage.getItem(ULT_BAJA_KEY); }catch(e){ return false; } })()){ $("actTit").textContent="Licencia traspasada"; $("actIntro").textContent="La licencia de esta tablet se pasó a otra. Tus datos siguen aquí: descarga una copia para abrirla en la tablet nueva."; }
   else if(st.tipo==="fin_prueba"){ $("actTit").textContent="Fin de la prueba gratuita"; $("actIntro").textContent=`Han pasado los ${PRUEBA_DIAS} días de prueba. Tus datos siguen guardados en este dispositivo.`; }
   else if(st.tipo==="prueba"){ $("actTit").textContent="Activar licencia"; $("actIntro").textContent=`Te quedan ${st.quedan} día(s) de prueba gratuita.`; }
   else { $("actTit").textContent="Renovar licencia"; $("actIntro").textContent=st.fin?`Tu licencia es válida hasta el ${fmt(st.fin)}.`:"Licencia sin caducidad."; }
   $("actCopia").classList.toggle("hidden",!(st.tipo==="caducada"||st.tipo==="fin_prueba"));
-  $("actCerrar").classList.toggle("hidden",!cerrable);
-  $("actGate").classList.remove("hidden"); $("actMsg").textContent=""; setTimeout(()=>$("actCod").focus(),100);
+  $("actCerrar").classList.toggle("hidden",!cerrable); $("actCerrar").textContent=st.tipo==="prueba"?"Seguir con la prueba gratuita":"Cerrar";
+  let lv=""; try{ lv=localStorage.getItem(ACT_KEY)||""; }catch(e){}
+  $("actTraspaso").classList.toggle("hidden",!(st.tipo==="activa"&&lv.startsWith("L:")));
+  let ub=null; try{ ub=JSON.parse(localStorage.getItem(ULT_BAJA_KEY)||"null"); }catch(e){}
+  $("actMsg").innerHTML=ub&&st.tipo!=="activa"?`<span style="color:var(--muted)">Licencia traspasada el ${fmt(ub.fecha)}. <a href="#" id="actVerBaja">Ver código de baja</a></span>`:"";
+  if(ub&&$("actVerBaja")) $("actVerBaja").onclick=e=>{ e.preventDefault(); mostrarBaja(ub); };
+  $("actGate").classList.remove("hidden"); setTimeout(()=>$("actCod").focus(),100);
 }
 function pintarAvisoLic(){
   const st=estadoLicencia(); let txt="";
@@ -3681,12 +3719,14 @@ function pintarAvisoLic(){
   $("actCopiar").onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(disp):Promise.reject()).then(()=>toast("Número copiado."),()=>prompt("Copia el número:",disp)); };
   $("actCopia").onclick=()=>{ try{ $("btnGuardar").click(); }catch(e){ alert("No se ha podido descargar la copia."); } };
   $("actCerrar").onclick=()=>$("actGate").classList.add("hidden");
+  $("actTraspaso").onclick=traspasarLicencia; $("bjCerrar").onclick=()=>$("mBaja").classList.add("hidden");
   $("avLicAct").onclick=()=>abrirLicencia(true); $("licApp").onclick=()=>abrirLicencia(true);
   let fallos=0;
   const probar=()=>{ const v=$("actCod").value.trim().toLowerCase(), dig=v.replace(/\D/g,"");
     let guardar="";
     if(v&&hashPin("ACT:"+v)===ACT_HASH) guardar=ACT_HASH;   // clave maestra de NovaApps (demostraciones)
     else if(dig.length===12||dig.length===14){ const n=dig.length-8, e=dig.slice(0,n), f=dig.slice(n,n+4)+"-"+dig.slice(n+4);
+      if(fechaLicOk(e)&&firmaLicencia(disp,e)===f&&bajas().includes(e+":"+f)){ $("actMsg").textContent="Esa licencia se traspasó a otra tablet y ya no vale en esta."; $("actCod").value=""; return; }
       if(fechaLicOk(e)&&firmaLicencia(disp,e)===f){
         if(finLicencia(e)&&diasHasta(finLicencia(e))<0){ $("actMsg").textContent="Ese código ya está caducado ("+fmt(finLicencia(e))+")."; return; }
         guardar="L:"+e+":"+f; } }
